@@ -13,11 +13,15 @@ internal static class GameConstants
 
 internal enum GamePhase
 {
+    // Normal gameplay update/render loop.
     Playing,
+    // Player reached the level goal.
     Won,
+    // Player died or failed the level.
     GameOver
 }
 
+// Tile semantics used in authored row strings and runtime collision.
 internal enum TileType
 {
     Empty,
@@ -38,6 +42,7 @@ internal sealed class Player
     public float Width { get; } = 24f;
     public float Height { get; } = 30f;
     public bool OnGround;
+    // Horizontal facing direction: -1 left, +1 right.
     public int Facing = 1;
 
     // Initializes the player at the current level spawn point.
@@ -75,6 +80,7 @@ internal sealed class CoinPickup
     public float X;
     public float Y;
     public bool Collected;
+    // De-syncs coin pulse animations so rows do not blink in lockstep.
     public float PulseOffset;
 
     // Creates a coin pickup in world space.
