@@ -2,8 +2,10 @@ using System.Drawing;
 
 namespace MarioClone2;
 
+// Builds authored level definitions and converts them into runtime data.
 internal static class LevelFactory
 {
+    // Returns the full ordered campaign list.
     public static List<LevelDefinition> Create()
     {
         return
@@ -13,6 +15,7 @@ internal static class LevelFactory
         ];
     }
 
+    // Parses tile characters into collision tiles, entities, spawn, and flag data.
     public static LevelRuntime CreateRuntime(LevelDefinition definition)
     {
         var height = definition.Rows.Length;
@@ -74,6 +77,7 @@ internal static class LevelFactory
         return new LevelRuntime(definition.Name, tiles, enemies, coins, spawn, flagX);
     }
 
+    // World 1 layout with gentle platforming and enemy density.
     private static LevelDefinition CreateGreenHills()
     {
         var b = new LevelBuilder(220, 17);
@@ -146,6 +150,7 @@ internal static class LevelFactory
         return b.Build("Green Hills");
     }
 
+    // World 2 layout with wider gaps and denser vertical platforming.
     private static LevelDefinition CreateSkyFortress()
     {
         var b = new LevelBuilder(240, 17);

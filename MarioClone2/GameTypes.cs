@@ -2,6 +2,7 @@ using System.Drawing;
 
 namespace MarioClone2;
 
+// Shared game-wide constants for physics, tile size, and viewport dimensions.
 internal static class GameConstants
 {
     public const int TileSize = 32;
@@ -26,6 +27,7 @@ internal enum TileType
     Pipe
 }
 
+// Mutable player state used by simulation and rendering.
 internal sealed class Player
 {
     public float X;
@@ -38,6 +40,7 @@ internal sealed class Player
     public bool OnGround;
     public int Facing = 1;
 
+    // Initializes the player at the current level spawn point.
     public Player(PointF spawn)
     {
         X = spawn.X;
@@ -45,6 +48,7 @@ internal sealed class Player
     }
 }
 
+// Mutable enemy state for simple patrolling and collision behavior.
 internal sealed class Enemy
 {
     public float X;
@@ -56,6 +60,7 @@ internal sealed class Enemy
     public bool Alive = true;
     public bool OnGround;
 
+    // Spawns a walking enemy at the requested world position and speed.
     public Enemy(float x, float y, float vx)
     {
         X = x;
@@ -64,6 +69,7 @@ internal sealed class Enemy
     }
 }
 
+// Collectible coin state, including a per-coin animation phase offset.
 internal sealed class CoinPickup
 {
     public float X;
@@ -71,6 +77,7 @@ internal sealed class CoinPickup
     public bool Collected;
     public float PulseOffset;
 
+    // Creates a coin pickup in world space.
     public CoinPickup(float x, float y, float pulseOffset)
     {
         X = x;
@@ -79,11 +86,13 @@ internal sealed class CoinPickup
     }
 }
 
+// Runtime tile cell data with optional per-tile state (for used question blocks).
 internal sealed class TileCell
 {
     public TileType Type;
     public bool Used;
 
+    // Creates a tile cell from a static level tile type.
     public TileCell(TileType type)
     {
         Type = type;
