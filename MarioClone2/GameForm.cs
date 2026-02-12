@@ -4,10 +4,14 @@ using System.Windows.Forms;
 
 namespace MarioClone2;
 
+// Main window that owns gameplay state, simulation updates, and input handling.
 internal sealed partial class GameForm : Form
 {
+    // Fixed-rate update timer (~60 FPS).
     private readonly System.Windows.Forms.Timer _timer;
+    // High-resolution clock used to calculate frame delta time.
     private readonly Stopwatch _clock = Stopwatch.StartNew();
+    // Tracks currently pressed keys for polling-style movement input.
     private readonly HashSet<Keys> _keysDown = new();
     private readonly List<LevelDefinition> _levelDefinitions = LevelFactory.Create();
     private readonly SpriteAtlas _sprites = new();
@@ -40,6 +44,7 @@ internal sealed partial class GameForm : Form
         DoubleBuffered = true;
         KeyPreview = true;
 
+        // Enable explicit double buffering flags to reduce flicker on redraw.
         SetStyle(
             ControlStyles.AllPaintingInWmPaint |
             ControlStyles.UserPaint |
@@ -50,6 +55,7 @@ internal sealed partial class GameForm : Form
         _cloudLayer = CreateCloudLayer(1920, GameConstants.ViewHeight);
         _mountainLayer = CreateMountainLayer(1920, GameConstants.ViewHeight);
 
+        // Start from the first authored level.
         LoadLevel(0);
 
         _timer = new System.Windows.Forms.Timer { Interval = 16 };
@@ -85,6 +91,7 @@ internal sealed partial class GameForm : Form
             return;
         }
 
+        // Clamp long frames so physics/collision remain stable after stalls.
         if (dt > 0.033f)
         {
             dt = 0.033f;
@@ -106,6 +113,7 @@ internal sealed partial class GameForm : Form
         var right = IsDown(Keys.Right, Keys.D);
         var jumpDown = IsDown(Keys.Space, Keys.Up, Keys.W);
 
+        // Resolve opposing keys into one horizontal movement direction.
         var move = 0;
         if (left)
         {
@@ -141,6 +149,7 @@ internal sealed partial class GameForm : Form
             _player.OnGround = false;
         }
 
+        // Jump-cut behavior: releasing jump early shortens the jump arc.
         if (!jumpDown && _jumpWasDown && _player.Vy < -220f)
         {
             _player.Vy = -220f;
@@ -181,6 +190,7 @@ internal sealed partial class GameForm : Form
             return;
         }
 
+        // Keep the player near center while clamping camera to level bounds.
         var maxCamera = Math.Max(0, _level.PixelWidth - ClientSize.Width);
         _cameraX = Math.Clamp(
             _player.X + (_player.Width * 0.5f) - (ClientSize.Width * 0.5f),
@@ -211,6 +221,7 @@ internal sealed partial class GameForm : Form
 
             if (enemy.OnGround)
             {
+                // Turn around at ledges by probing a tile just ahead of the enemy.
                 var aheadX = enemy.Vx > 0f
                     ? enemy.X + enemy.Width + 2f
                     : enemy.X - 2f;
@@ -230,6 +241,7 @@ internal sealed partial class GameForm : Form
                 continue;
             }
 
+            // Downward hits near the enemy head count as stomps.
             var stomped = _player.Vy > 50f && (playerRect.Bottom - enemyRect.Top) < 18f;
             if (stomped)
             {
@@ -310,6 +322,7 @@ internal sealed partial class GameForm : Form
             _player.Vx = 0f;
         }
 
+        // Sweep across potentially overlapping solid tiles after horizontal motion.
         var bounds = PlayerRect();
         var minX = ToTile(bounds.Left);
         var maxX = ToTile(bounds.Right - 0.001f);
@@ -381,6 +394,7 @@ internal sealed partial class GameForm : Form
                 {
                     _player.Y = tileRect.Bottom;
                     _player.Vy = 0f;
+                    // Hitting a block from below can consume question blocks.
                     OnBlockBumped(tx, ty);
                 }
 
@@ -486,6 +500,7 @@ internal sealed partial class GameForm : Form
             return;
         }
 
+        // Question blocks only award once.
         tile.Used = true;
         _coinCount += 1;
         _score += 100;
@@ -541,12 +556,14 @@ internal sealed partial class GameForm : Form
 
         if (e.KeyCode == Keys.R && _phase == GamePhase.Playing)
         {
+            // Quick retry without resetting score/lives.
             LoadLevel(_levelIndex);
             return;
         }
 
         if (e.KeyCode == Keys.Enter && _phase != GamePhase.Playing)
         {
+            // Full run restart after win or game over.
             RestartGame();
         }
     }

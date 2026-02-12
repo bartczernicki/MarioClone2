@@ -2,16 +2,18 @@ using System.Windows.Forms;
 
 namespace MarioClone2;
 
-// Application bootstrap and WinForms entry point.
+// Application bootstrap for the WinForms client.
+// This type is intentionally minimal so startup order is explicit.
 internal static class Program
 {
     [STAThread]
-    // Configures WinForms and starts the main game window.
+    // STA is required by WinForms/COM interop features used by UI controls.
+    // Main sets up framework defaults, then enters the window message loop.
     private static void Main()
     {
-        // Applies default WinForms app configuration.
+        // Applies .NET WinForms defaults (DPI, default font behavior, rendering setup).
         ApplicationConfiguration.Initialize();
-        // Launches the main game form.
+        // Starts the blocking UI loop; process exits when GameForm closes.
         Application.Run(new GameForm());
     }
 }

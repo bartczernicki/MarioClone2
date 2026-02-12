@@ -4,6 +4,7 @@ using System.Windows.Forms;
 
 namespace MarioClone2;
 
+// Rendering split into a partial class to keep draw code separate from simulation.
 internal sealed partial class GameForm
 {
     protected override void OnPaint(PaintEventArgs e)
@@ -41,6 +42,7 @@ internal sealed partial class GameForm
             offset -= layer.Width;
         }
 
+        // Repeat each layer horizontally for seamless parallax scrolling.
         for (var x = offset; x < ClientSize.Width; x += layer.Width)
         {
             g.DrawImage(layer, x, 0, layer.Width, ClientSize.Height);
@@ -50,6 +52,7 @@ internal sealed partial class GameForm
     private void DrawLevel(Graphics g)
     {
         var tileSize = GameConstants.TileSize;
+        // Draw only tiles inside or near the viewport for cheaper rendering.
         var minX = Math.Max(0, ToTile(_cameraX) - 1);
         var maxX = Math.Min(_level.Width - 1, ToTile(_cameraX + ClientSize.Width) + 2);
 
@@ -87,6 +90,7 @@ internal sealed partial class GameForm
 
         var poleX = (int)(_level.FlagX - _cameraX);
         var groundY = _level.GroundYAtFlag();
+        // Draw a simple pole + pennant marker at the level goal.
         using var polePen = new Pen(Color.FromArgb(230, 230, 230), 4f);
         g.DrawLine(polePen, poleX, 40, poleX, groundY);
         g.DrawImage(_sprites.Flag, poleX - 2, 52, 30, 24);
@@ -135,6 +139,7 @@ internal sealed partial class GameForm
         }
         else
         {
+            // Mirror sprite around its local origin when facing left.
             var state = g.Save();
             g.TranslateTransform(playerX + _player.Width, playerY);
             g.ScaleTransform(-1f, 1f);
@@ -193,6 +198,7 @@ internal sealed partial class GameForm
         g.Clear(Color.Transparent);
 
         using var cloudBrush = new SolidBrush(Color.FromArgb(185, 255, 255, 255));
+        // Seeded RNG keeps background clouds deterministic between runs.
         var rng = new Random(7);
         for (var i = 0; i < 25; i++)
         {

@@ -2,6 +2,8 @@ using System.Drawing;
 
 namespace MarioClone2;
 
+// Creates and owns all procedural sprite/tile bitmaps used by the game.
+// Centralizing generation keeps art style consistent and avoids asset files.
 internal sealed class SpriteAtlas : IDisposable
 {
     public Bitmap MarioIdle { get; }
@@ -19,21 +21,26 @@ internal sealed class SpriteAtlas : IDisposable
     public Bitmap PipeTile { get; }
     public Bitmap Flag { get; }
 
+    // Tracks every allocated bitmap so disposal is guaranteed in one place.
     private readonly List<Bitmap> _all = new();
 
     public SpriteAtlas()
     {
+        // Player frames: idle, two-step run cycle, and jump pose.
         MarioIdle = Add(CreateMarioSprite(0));
         MarioRunA = Add(CreateMarioSprite(1));
         MarioRunB = Add(CreateMarioSprite(2));
         MarioJump = Add(CreateMarioSprite(3));
 
+        // Two enemy foot variants alternate to fake walk animation.
         GoombaA = Add(CreateGoombaSprite(false));
         GoombaB = Add(CreateGoombaSprite(true));
 
+        // Wide/thin coin frames alternate to fake coin spin.
         CoinA = Add(CreateCoinSprite(false));
         CoinB = Add(CreateCoinSprite(true));
 
+        // Shared world tiles and level goal marker.
         GroundTile = Add(CreateGroundTile());
         BrickTile = Add(CreateBrickTile());
         QuestionTile = Add(CreateQuestionTile(false));
@@ -42,6 +49,8 @@ internal sealed class SpriteAtlas : IDisposable
         Flag = Add(CreateFlagTile());
     }
 
+    // Chooses player sprite by movement state:
+    // airborne -> jump, low horizontal speed -> idle, else -> animated run frame.
     public Bitmap GetPlayerFrame(float animTime, float vx, bool onGround)
     {
         if (!onGround)
@@ -59,18 +68,22 @@ internal sealed class SpriteAtlas : IDisposable
 
     public void Dispose()
     {
+        // Dispose every generated bitmap to release native GDI handles.
         foreach (var bmp in _all)
         {
             bmp.Dispose();
         }
     }
 
+    // Registers bitmaps in the disposal list and returns the same instance.
     private Bitmap Add(Bitmap bmp)
     {
         _all.Add(bmp);
         return bmp;
     }
 
+    // Draws a pixel-art-style Mario sprite at 2x scale.
+    // `variant` only changes the leg/foot rows to create idle/run/jump poses.
     private static Bitmap CreateMarioSprite(int variant)
     {
         const int scale = 2;
@@ -97,18 +110,22 @@ internal sealed class SpriteAtlas : IDisposable
         switch (variant)
         {
             case 1:
+                // Run frame A.
                 FillPx(g, hair, 3, 14, 4, 2, scale);
                 FillPx(g, hair, 10, 14, 3, 2, scale);
                 break;
             case 2:
+                // Run frame B.
                 FillPx(g, hair, 5, 14, 3, 2, scale);
                 FillPx(g, hair, 8, 14, 4, 2, scale);
                 break;
             case 3:
+                // Jump frame.
                 FillPx(g, hair, 4, 14, 3, 2, scale);
                 FillPx(g, hair, 9, 14, 3, 2, scale);
                 break;
             default:
+                // Idle frame.
                 FillPx(g, hair, 4, 14, 3, 2, scale);
                 FillPx(g, hair, 9, 14, 3, 2, scale);
                 break;
@@ -117,6 +134,8 @@ internal sealed class SpriteAtlas : IDisposable
         return bmp;
     }
 
+    // Draws a Goomba-like enemy sprite.
+    // `altFeet` offsets the feet to provide a two-frame walking illusion.
     private static Bitmap CreateGoombaSprite(bool altFeet)
     {
         const int scale = 2;
@@ -153,6 +172,7 @@ internal sealed class SpriteAtlas : IDisposable
         return bmp;
     }
 
+    // Draws one coin frame; alternating wide/thin frames implies spinning.
     private static Bitmap CreateCoinSprite(bool thin)
     {
         var bmp = new Bitmap(16, 16);
@@ -224,6 +244,7 @@ internal sealed class SpriteAtlas : IDisposable
         return bmp;
     }
 
+    // Draws the "?" block; used blocks switch to a muted palette and hide the mark.
     private static Bitmap CreateQuestionTile(bool used)
     {
         var s = GameConstants.TileSize;
@@ -296,6 +317,7 @@ internal sealed class SpriteAtlas : IDisposable
         return bmp;
     }
 
+    // Draws a single scaled pixel rectangle in sprite-space coordinates.
     private static void FillPx(Graphics g, Color color, int x, int y, int w, int h, int scale)
     {
         using var brush = new SolidBrush(color);

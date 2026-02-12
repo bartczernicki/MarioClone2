@@ -25,6 +25,7 @@ internal static class LevelFactory
         var enemies = new List<Enemy>();
         var coins = new List<CoinPickup>();
 
+        // Fallback values used if a map omits explicit spawn/flag markers.
         var spawn = new PointF(64f, 64f);
         var flagX = (width - 4) * GameConstants.TileSize + 0f;
 
@@ -33,9 +34,12 @@ internal static class LevelFactory
             var row = definition.Rows[y];
             for (var x = 0; x < width; x++)
             {
+                // Treat missing columns in short rows as empty space.
                 var c = x < row.Length ? row[x] : '.';
                 var tileType = TileType.Empty;
 
+                // Authoring legend:
+                // # ground, B brick, ? question, P pipe, M spawn, E enemy, C coin, F flag.
                 switch (c)
                 {
                     case '#':
