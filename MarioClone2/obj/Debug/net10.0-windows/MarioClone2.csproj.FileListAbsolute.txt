@@ -1,0 +1,14 @@
+C:\Users\BartAIServer\source\MarioClone2\MarioClone2\obj\Debug\net10.0-windows\MarioClone2.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\BartAIServer\source\MarioClone2\MarioClone2\obj\Debug\net10.0-windows\MarioClone2.AssemblyInfoInputs.cache
+C:\Users\BartAIServer\source\MarioClone2\MarioClone2\obj\Debug\net10.0-windows\MarioClone2.AssemblyInfo.cs
+C:\Users\BartAIServer\source\MarioClone2\MarioClone2\obj\Debug\net10.0-windows\MarioClone2.csproj.CoreCompileInputs.cache
+C:\Users\BartAIServer\source\MarioClone2\MarioClone2\bin\Debug\net10.0-windows\MarioClone2.exe
+C:\Users\BartAIServer\source\MarioClone2\MarioClone2\bin\Debug\net10.0-windows\MarioClone2.deps.json
+C:\Users\BartAIServer\source\MarioClone2\MarioClone2\bin\Debug\net10.0-windows\MarioClone2.runtimeconfig.json
+C:\Users\BartAIServer\source\MarioClone2\MarioClone2\bin\Debug\net10.0-windows\MarioClone2.dll
+C:\Users\BartAIServer\source\MarioClone2\MarioClone2\bin\Debug\net10.0-windows\MarioClone2.pdb
+C:\Users\BartAIServer\source\MarioClone2\MarioClone2\obj\Debug\net10.0-windows\MarioClone2.dll
+C:\Users\BartAIServer\source\MarioClone2\MarioClone2\obj\Debug\net10.0-windows\refint\MarioClone2.dll
+C:\Users\BartAIServer\source\MarioClone2\MarioClone2\obj\Debug\net10.0-windows\MarioClone2.pdb
+C:\Users\BartAIServer\source\MarioClone2\MarioClone2\obj\Debug\net10.0-windows\MarioClone2.genruntimeconfig.cache
+C:\Users\BartAIServer\source\MarioClone2\MarioClone2\obj\Debug\net10.0-windows\ref\MarioClone2.dll
