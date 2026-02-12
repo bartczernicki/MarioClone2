@@ -9,7 +9,9 @@ internal static class Program
     // Configures WinForms and starts the main game window.
     private static void Main()
     {
+        // Applies default WinForms app configuration.
         ApplicationConfiguration.Initialize();
+        // Launches the main game form.
         Application.Run(new GameForm());
     }
 }
