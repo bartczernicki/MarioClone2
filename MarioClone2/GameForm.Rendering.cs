@@ -146,6 +146,16 @@ internal sealed partial class GameForm
             g.DrawImage(_sprites.Mushroom, x, y, 20, 20);
         }
 
+        foreach (var checkpoint in _level.Checkpoints)
+        {
+            var sprite = checkpoint.Activated
+                ? _sprites.CheckpointActive
+                : _sprites.CheckpointInactive;
+            var x = checkpoint.X - _cameraX - 8f;
+            var y = checkpoint.Y - 44f;
+            g.DrawImage(sprite, x, y, 20f, 46f);
+        }
+
         DrawBrickBreakEffects(g);
         DrawCoinPopEffects(g);
 
@@ -251,7 +261,11 @@ internal sealed partial class GameForm
         using var font = new Font("Consolas", 15f, FontStyle.Bold, GraphicsUnit.Pixel);
 
         var powerText = _player.PowerState == PlayerPowerState.Big ? "BIG" : "SMALL";
-        var hud = $"WORLD {_levelIndex + 1}/{_levelDefinitions.Count}    LIVES {_lives}    COINS {_coinCount}    SCORE {_score}    FORM {powerText}";
+        var sprintText = _player.Sprinting ? "RUN" : "---";
+        var checkpointText = _activeCheckpointByLevel.TryGetValue(_levelIndex, out var checkpointOrder)
+            ? checkpointOrder.ToString()
+            : "-";
+        var hud = $"WORLD {_levelIndex + 1}/{_levelDefinitions.Count}    LIVES {_lives}    COINS {_coinCount}    SCORE {_score}    FORM {powerText}    SPD {sprintText}    CP {checkpointText}";
         g.DrawString(hud, font, shadowBrush, 13, 13);
         g.DrawString(hud, font, textBrush, 12, 12);
     }

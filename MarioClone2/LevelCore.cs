@@ -10,6 +10,7 @@ internal sealed class LevelRuntime
     public List<Enemy> Enemies { get; }
     public List<CoinPickup> Coins { get; }
     public List<PowerupPickup> Powerups { get; }
+    public List<CheckpointMarker> Checkpoints { get; }
     public PointF Spawn { get; }
     public float FlagX { get; }
 
@@ -25,6 +26,7 @@ internal sealed class LevelRuntime
         List<Enemy> enemies,
         List<CoinPickup> coins,
         List<PowerupPickup> powerups,
+        List<CheckpointMarker> checkpoints,
         PointF spawn,
         float flagX)
     {
@@ -33,6 +35,7 @@ internal sealed class LevelRuntime
         Enemies = enemies;
         Coins = coins;
         Powerups = powerups;
+        Checkpoints = checkpoints;
         Spawn = spawn;
         FlagX = flagX;
     }

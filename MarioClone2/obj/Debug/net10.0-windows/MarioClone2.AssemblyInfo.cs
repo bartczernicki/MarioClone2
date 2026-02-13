@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MarioClone2")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f39cca19252f101e4fd666a4a5a49c6d53a7ab65")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+894fdb446feba3521891ecb35d8bd675cafe9f8e")]
 [assembly: System.Reflection.AssemblyProductAttribute("MarioClone2")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MarioClone2")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

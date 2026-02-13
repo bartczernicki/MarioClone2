@@ -25,6 +25,7 @@ internal static class LevelFactory
         var enemies = new List<Enemy>();
         var coins = new List<CoinPickup>();
         var powerups = new List<PowerupPickup>();
+        var checkpoints = new List<CheckpointMarker>();
 
         // Fallback values used if a map omits explicit spawn/flag markers.
         var spawn = new PointF(64f, 64f);
@@ -41,7 +42,7 @@ internal static class LevelFactory
 
                 // Authoring legend:
                 // # ground, B brick, ? question, P pipe, ^ spike,
-                // M spawn, E enemy, C coin, U power-up, F flag.
+                // M spawn, E enemy, C coin, U power-up, K checkpoint, F flag.
                 switch (c)
                 {
                     case '#':
@@ -79,6 +80,12 @@ internal static class LevelFactory
                             x * GameConstants.TileSize + 6f,
                             y * GameConstants.TileSize + 8f));
                         break;
+                    case 'K':
+                        checkpoints.Add(new CheckpointMarker(
+                            x * GameConstants.TileSize + 4f,
+                            y * GameConstants.TileSize + 2f,
+                            0));
+                        break;
                     case 'F':
                         flagX = x * GameConstants.TileSize + 8f;
                         break;
@@ -88,7 +95,13 @@ internal static class LevelFactory
             }
         }
 
-        return new LevelRuntime(definition.Name, tiles, enemies, coins, powerups, spawn, flagX);
+        checkpoints.Sort((a, b) => a.X.CompareTo(b.X));
+        for (var i = 0; i < checkpoints.Count; i++)
+        {
+            checkpoints[i].OrderIndex = i + 1;
+        }
+
+        return new LevelRuntime(definition.Name, tiles, enemies, coins, powerups, checkpoints, spawn, flagX);
     }
 
     // World 1 layout with gentle platforming and enemy density.
@@ -129,6 +142,8 @@ internal static class LevelFactory
         b.Place(12, 12, 'U');
         b.Place(76, 11, 'U');
         b.Place(168, 12, 'U');
+        b.Place(70, 13, 'K');
+        b.Place(154, 13, 'K');
 
         b.Place(34, 14, '^');
         b.Place(68, 14, '^');
@@ -207,6 +222,8 @@ internal static class LevelFactory
         b.Place(24, 9, 'U');
         b.Place(120, 10, 'U');
         b.Place(196, 8, 'U');
+        b.Place(84, 13, 'K');
+        b.Place(168, 13, 'K');
 
         b.Place(30, 14, '^');
         b.Place(62, 14, '^');

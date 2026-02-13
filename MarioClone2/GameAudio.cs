@@ -17,6 +17,7 @@ internal sealed class GameAudio : IDisposable
     private CachedSound? _brickBreakSound;
     private CachedSound? _powerupSound;
     private CachedSound? _shrinkSound;
+    private CachedSound? _checkpointSound;
     private bool _enabled;
 
     public GameAudio()
@@ -34,6 +35,7 @@ internal sealed class GameAudio : IDisposable
             _brickBreakSound = new CachedSound(WaveFactory.CreateBrickBreakWave(), 0.8f);
             _powerupSound = new CachedSound(WaveFactory.CreatePowerupWave(), 0.88f);
             _shrinkSound = new CachedSound(WaveFactory.CreateShrinkWave(), 0.9f);
+            _checkpointSound = new CachedSound(WaveFactory.CreateCheckpointWave(), 0.9f);
 
             _mixer.AddMixerInput(new LoopingCachedSoundSampleProvider(music));
 
@@ -86,6 +88,11 @@ internal sealed class GameAudio : IDisposable
     public void PlayShrink()
     {
         PlayOneShot(_shrinkSound);
+    }
+
+    public void PlayCheckpoint()
+    {
+        PlayOneShot(_checkpointSound);
     }
 
     public void Dispose()
@@ -182,6 +189,15 @@ internal static class WaveFactory
         b.AddSquare(780f, 0.03f, 0.18f);
         b.AddSquare(520f, 0.035f, 0.17f);
         b.AddSquare(340f, 0.05f, 0.16f);
+        return b.ToWaveBytes();
+    }
+
+    public static byte[] CreateCheckpointWave()
+    {
+        var b = new WaveBuilder(SampleRate);
+        b.AddSine(560f, 0.035f, 0.18f);
+        b.AddSine(740f, 0.045f, 0.19f);
+        b.AddSine(980f, 0.06f, 0.2f);
         return b.ToWaveBytes();
     }
 

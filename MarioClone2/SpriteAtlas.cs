@@ -26,6 +26,8 @@ internal sealed class SpriteAtlas : IDisposable
     public Bitmap SpikeTile { get; }
     public Bitmap Flag { get; }
     public Bitmap Mushroom { get; }
+    public Bitmap CheckpointInactive { get; }
+    public Bitmap CheckpointActive { get; }
 
     // Tracks every allocated bitmap so disposal is guaranteed in one place.
     private readonly List<Bitmap> _all = new();
@@ -59,6 +61,8 @@ internal sealed class SpriteAtlas : IDisposable
         SpikeTile = Add(CreateSpikeTile());
         Flag = Add(CreateFlagTile());
         Mushroom = Add(CreateMushroomSprite());
+        CheckpointInactive = Add(CreateCheckpointSprite(false));
+        CheckpointActive = Add(CreateCheckpointSprite(true));
     }
 
     // Chooses player sprite by movement state with extra readability for jump/fall/skid.
@@ -437,6 +441,49 @@ internal sealed class SpriteAtlas : IDisposable
 
         g.DrawArc(outline, 1, 0, 18, 11, 0, 180);
         g.DrawRectangle(outline, 4, 8, 12, 10);
+
+        return bmp;
+    }
+
+    private static Bitmap CreateCheckpointSprite(bool active)
+    {
+        const int width = 20;
+        const int height = 46;
+        var bmp = new Bitmap(width, height);
+        using var g = Graphics.FromImage(bmp);
+        g.Clear(Color.Transparent);
+
+        var flagColor = active
+            ? Color.FromArgb(255, 238, 108)
+            : Color.FromArgb(188, 188, 188);
+        var poleColor = active
+            ? Color.FromArgb(248, 248, 248)
+            : Color.FromArgb(174, 174, 174);
+
+        using var baseBrush = new SolidBrush(Color.FromArgb(124, 92, 62));
+        using var poleBrush = new SolidBrush(poleColor);
+        using var flagBrush = new SolidBrush(flagColor);
+        using var outlinePen = new Pen(Color.FromArgb(76, 54, 32), 1f);
+        using var shineBrush = new SolidBrush(Color.FromArgb(230, 255, 255, 255));
+
+        g.FillRectangle(baseBrush, 2, height - 6, width - 4, 6);
+        g.FillRectangle(poleBrush, 9, 2, 2, height - 8);
+
+        Point[] pennant =
+        [
+            new Point(11, 7),
+            new Point(width - 2, 12),
+            new Point(11, 17)
+        ];
+
+        g.FillPolygon(flagBrush, pennant);
+        g.DrawPolygon(outlinePen, pennant);
+
+        if (active)
+        {
+            g.FillEllipse(shineBrush, 5, 5, 3, 3);
+            g.FillEllipse(shineBrush, 14, 3, 2, 2);
+        }
 
         return bmp;
     }

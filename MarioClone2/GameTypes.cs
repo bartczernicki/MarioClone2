@@ -9,6 +9,14 @@ internal static class GameConstants
     public const int ViewWidth = 960;
     public const int ViewHeight = 540;
     public const float Gravity = 1500f;
+    public const float CoyoteTimeSeconds = 0.10f;
+    public const float JumpBufferSeconds = 0.12f;
+    public const float WalkMaxRunSpeed = 240f;
+    public const float SprintMaxRunSpeed = 320f;
+    public const float WalkAcceleration = 1600f;
+    public const float SprintAcceleration = 1950f;
+    public const float GroundFriction = 2400f;
+    public const float AirDrag = 380f;
     // Native pixel dimensions of generated coin sprites in the atlas.
     public const float CoinSourceSize = 16f;
     // On-screen coin size after upscale for better readability.
@@ -63,6 +71,9 @@ internal sealed class Player
     public PlayerPowerState PowerState = PlayerPowerState.Small;
     // Brief invulnerability window after shrink/hit to prevent rapid chained damage.
     public float DamageCooldownSeconds;
+    public float CoyoteTimerSeconds;
+    public float JumpBufferTimerSeconds;
+    public bool Sprinting;
 
     // Initializes the player at the current level spawn point.
     public Player(PointF spawn)
@@ -123,6 +134,21 @@ internal sealed class PowerupPickup
     {
         X = x;
         Y = y;
+    }
+}
+
+internal sealed class CheckpointMarker
+{
+    public float X;
+    public float Y;
+    public bool Activated;
+    public int OrderIndex;
+
+    public CheckpointMarker(float x, float y, int orderIndex)
+    {
+        X = x;
+        Y = y;
+        OrderIndex = orderIndex;
     }
 }
 

@@ -22,6 +22,7 @@ internal sealed partial class GameForm : Form
     // Short-lived visual FX containers updated every frame.
     private readonly List<BrickDebrisPiece> _brickDebris = [];
     private readonly List<CoinPopEffect> _coinPops = [];
+    private readonly Dictionary<int, int> _activeCheckpointByLevel = [];
 
     private LevelRuntime _level = null!;
     private Player _player = null!;
@@ -126,6 +127,8 @@ internal sealed partial class GameForm : Form
         var left = IsDown(Keys.Left, Keys.A);
         var right = IsDown(Keys.Right, Keys.D);
         var jumpDown = IsDown(Keys.Space, Keys.Up, Keys.W);
+        var jumpPressedThisFrame = jumpDown && !_jumpWasDown;
+        var sprintDown = IsDown(Keys.ShiftKey, Keys.LShiftKey, Keys.RShiftKey);
 
         // Resolve opposing keys into one horizontal movement direction.
         var move = 0;
@@ -139,30 +142,32 @@ internal sealed partial class GameForm : Form
             move += 1;
         }
 
-        const float accel = 1600f;
-        const float maxRunSpeed = 240f;
-        const float groundFriction = 2400f;
-        const float airDrag = 400f;
+        _player.Sprinting = sprintDown && move != 0 && _player.OnGround;
+        UpdateJumpWindows(dt, jumpPressedThisFrame);
 
         if (move != 0)
         {
             _player.Facing = move;
+            var accel = _player.Sprinting
+                ? GameConstants.SprintAcceleration
+                : GameConstants.WalkAcceleration;
             _player.Vx += move * accel * dt;
         }
         else
         {
-            var friction = _player.OnGround ? groundFriction : airDrag;
+            var friction = _player.OnGround ? GameConstants.GroundFriction : GameConstants.AirDrag;
             _player.Vx = MoveToward(_player.Vx, 0f, friction * dt);
         }
 
-        _player.Vx = Math.Clamp(_player.Vx, -maxRunSpeed, maxRunSpeed);
-
-        if (jumpDown && !_jumpWasDown && _player.OnGround)
+        if (!_player.Sprinting && move != 0 && MathF.Abs(_player.Vx) > GameConstants.WalkMaxRunSpeed)
         {
-            _player.Vy = -560f;
-            _player.OnGround = false;
-            _audio.PlayJump();
+            var targetSpeed = MathF.Sign(_player.Vx) * GameConstants.WalkMaxRunSpeed;
+            var decay = _player.OnGround ? GameConstants.GroundFriction : GameConstants.AirDrag;
+            _player.Vx = MoveToward(_player.Vx, targetSpeed, decay * dt);
         }
+
+        _player.Vx = Math.Clamp(_player.Vx, -GameConstants.SprintMaxRunSpeed, GameConstants.SprintMaxRunSpeed);
+        TryConsumeBufferedJump();
 
         // Jump-cut behavior: releasing jump early shortens the jump arc.
         if (!jumpDown && _jumpWasDown && _player.Vy < -220f)
@@ -179,6 +184,7 @@ internal sealed partial class GameForm : Form
 
         _player.Y += _player.Vy * dt;
         ResolvePlayerVertical();
+        CheckCheckpointActivation();
 
         if (CheckSpikeHazards())
         {
@@ -225,6 +231,46 @@ internal sealed partial class GameForm : Form
             _player.X + (_player.Width * 0.5f) - (ClientSize.Width * 0.5f),
             0f,
             maxCamera);
+    }
+
+    private void UpdateJumpWindows(float dt, bool jumpPressedThisFrame)
+    {
+        if (jumpPressedThisFrame)
+        {
+            _player.JumpBufferTimerSeconds = GameConstants.JumpBufferSeconds;
+        }
+        else if (_player.JumpBufferTimerSeconds > 0f)
+        {
+            _player.JumpBufferTimerSeconds = Math.Max(0f, _player.JumpBufferTimerSeconds - dt);
+        }
+
+        if (_player.OnGround)
+        {
+            _player.CoyoteTimerSeconds = GameConstants.CoyoteTimeSeconds;
+        }
+        else if (_player.CoyoteTimerSeconds > 0f)
+        {
+            _player.CoyoteTimerSeconds = Math.Max(0f, _player.CoyoteTimerSeconds - dt);
+        }
+    }
+
+    private void TryConsumeBufferedJump()
+    {
+        if (_player.JumpBufferTimerSeconds <= 0f)
+        {
+            return;
+        }
+
+        if (!_player.OnGround && _player.CoyoteTimerSeconds <= 0f)
+        {
+            return;
+        }
+
+        _player.Vy = -560f;
+        _player.OnGround = false;
+        _player.JumpBufferTimerSeconds = 0f;
+        _player.CoyoteTimerSeconds = 0f;
+        _audio.PlayJump();
     }
 
     private bool UpdateEnemies(float dt)
@@ -374,6 +420,7 @@ internal sealed partial class GameForm : Form
         _levelIndex = 0;
         _phase = GamePhase.Playing;
         _status = string.Empty;
+        _activeCheckpointByLevel.Clear();
         LoadLevel(0);
         SaveProgress();
     }
@@ -382,13 +429,68 @@ internal sealed partial class GameForm : Form
     {
         _levelIndex = Math.Clamp(index, 0, _levelDefinitions.Count - 1);
         _level = LevelFactory.CreateRuntime(_levelDefinitions[_levelIndex]);
-        _player = new Player(_level.Spawn);
+
+        if (_activeCheckpointByLevel.TryGetValue(_levelIndex, out var checkpointOrder))
+        {
+            foreach (var checkpoint in _level.Checkpoints)
+            {
+                checkpoint.Activated = checkpoint.OrderIndex <= checkpointOrder;
+            }
+        }
+
+        _player = new Player(GetRespawnSpawnForLevel(_levelIndex, _level))
+        {
+            CoyoteTimerSeconds = GameConstants.CoyoteTimeSeconds
+        };
         _cameraX = 0f;
         _jumpWasDown = false;
         _brickDebris.Clear();
         _coinPops.Clear();
         _phase = GamePhase.Playing;
         _status = string.Empty;
+    }
+
+    private void CheckCheckpointActivation()
+    {
+        if (_level.Checkpoints.Count == 0)
+        {
+            return;
+        }
+
+        var highestOrder = _activeCheckpointByLevel.TryGetValue(_levelIndex, out var activeOrder)
+            ? activeOrder
+            : 0;
+        var playerRect = PlayerRect();
+        var newlyActivatedOrder = 0;
+
+        foreach (var checkpoint in _level.Checkpoints)
+        {
+            if (checkpoint.Activated)
+            {
+                continue;
+            }
+
+            var checkpointRect = new RectangleF(checkpoint.X - 8f, checkpoint.Y - 42f, 20f, 42f);
+            if (!playerRect.IntersectsWith(checkpointRect))
+            {
+                continue;
+            }
+
+            newlyActivatedOrder = Math.Max(newlyActivatedOrder, checkpoint.OrderIndex);
+        }
+
+        if (newlyActivatedOrder <= highestOrder)
+        {
+            return;
+        }
+
+        _activeCheckpointByLevel[_levelIndex] = newlyActivatedOrder;
+        foreach (var checkpoint in _level.Checkpoints)
+        {
+            checkpoint.Activated = checkpoint.OrderIndex <= newlyActivatedOrder;
+        }
+
+        _audio.PlayCheckpoint();
     }
 
     private void ResolvePlayerHorizontal()
@@ -764,6 +866,24 @@ internal sealed partial class GameForm : Form
             CoinCount = Math.Max(0, _coinCount),
             Lives = Math.Max(0, _lives)
         });
+    }
+
+    private PointF GetRespawnSpawnForLevel(int levelIndex, LevelRuntime runtime)
+    {
+        if (!_activeCheckpointByLevel.TryGetValue(levelIndex, out var checkpointOrder))
+        {
+            return runtime.Spawn;
+        }
+
+        foreach (var checkpoint in runtime.Checkpoints)
+        {
+            if (checkpoint.OrderIndex == checkpointOrder)
+            {
+                return new PointF(checkpoint.X, checkpoint.Y);
+            }
+        }
+
+        return runtime.Spawn;
     }
 
     private RectangleF PlayerRect()
