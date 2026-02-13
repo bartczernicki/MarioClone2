@@ -7,9 +7,13 @@ namespace MarioClone2;
 internal sealed class SpriteAtlas : IDisposable
 {
     public Bitmap MarioIdle { get; }
+    public Bitmap MarioIdleBlink { get; }
     public Bitmap MarioRunA { get; }
     public Bitmap MarioRunB { get; }
-    public Bitmap MarioJump { get; }
+    public Bitmap MarioRunC { get; }
+    public Bitmap MarioJumpUp { get; }
+    public Bitmap MarioFall { get; }
+    public Bitmap MarioSkid { get; }
     public Bitmap GoombaA { get; }
     public Bitmap GoombaB { get; }
     public Bitmap CoinA { get; }
@@ -28,11 +32,15 @@ internal sealed class SpriteAtlas : IDisposable
 
     public SpriteAtlas()
     {
-        // Player frames: idle, two-step run cycle, and jump pose.
+        // Player frames: idle/blink, three-step run cycle, jump/fall, and skid pose.
         MarioIdle = Add(CreateMarioSprite(0));
+        MarioIdleBlink = Add(CreateMarioSprite(6));
         MarioRunA = Add(CreateMarioSprite(1));
         MarioRunB = Add(CreateMarioSprite(2));
-        MarioJump = Add(CreateMarioSprite(3));
+        MarioRunC = Add(CreateMarioSprite(7));
+        MarioJumpUp = Add(CreateMarioSprite(3));
+        MarioFall = Add(CreateMarioSprite(4));
+        MarioSkid = Add(CreateMarioSprite(5));
 
         // Two enemy foot variants alternate to fake walk animation.
         GoombaA = Add(CreateGoombaSprite(false));
@@ -53,21 +61,34 @@ internal sealed class SpriteAtlas : IDisposable
         Mushroom = Add(CreateMushroomSprite());
     }
 
-    // Chooses player sprite by movement state:
-    // airborne -> jump, low horizontal speed -> idle, else -> animated run frame.
-    public Bitmap GetPlayerFrame(float animTime, float vx, bool onGround)
+    // Chooses player sprite by movement state with extra readability for jump/fall/skid.
+    public Bitmap GetPlayerFrame(float animTime, float vx, float vy, bool onGround, int facing)
     {
         if (!onGround)
         {
-            return MarioJump;
+            return vy < -30f ? MarioJumpUp : MarioFall;
         }
 
-        if (MathF.Abs(vx) < 8f)
+        var speed = MathF.Abs(vx);
+        if (speed < 8f)
         {
-            return MarioIdle;
+            var blinkPhase = animTime % 2.8f;
+            return blinkPhase >= 2.62f ? MarioIdleBlink : MarioIdle;
         }
 
-        return MathF.Sin(animTime * 18f) > 0f ? MarioRunA : MarioRunB;
+        if (speed > 140f && facing != 0 && MathF.Sign(vx) != MathF.Sign(facing))
+        {
+            return MarioSkid;
+        }
+
+        var stepSpeed = Math.Clamp(speed / 240f, 0.58f, 1.2f);
+        var frame = (int)(animTime * 13f * stepSpeed) % 3;
+        return frame switch
+        {
+            0 => MarioRunA,
+            1 => MarioRunB,
+            _ => MarioRunC
+        };
     }
 
     public void Dispose()
@@ -101,13 +122,16 @@ internal sealed class SpriteAtlas : IDisposable
         var denim = Color.FromArgb(46, 86, 205);
         var hair = Color.FromArgb(84, 49, 20);
         var button = Color.FromArgb(255, 215, 70);
+        var eye = Color.FromArgb(30, 30, 30);
 
         FillPx(g, hat, 3, 1, 10, 3, scale);
         FillPx(g, hair, 3, 4, 3, 3, scale);
         FillPx(g, skin, 6, 4, 6, 4, scale);
+        FillPx(g, eye, 8, 5, 1, 1, scale);
+        FillPx(g, eye, 10, 5, 1, 1, scale);
         FillPx(g, hair, 8, 7, 4, 1, scale);
         FillPx(g, shirt, 4, 8, 8, 3, scale);
-        FillPx(g, denim, 4, 11, 8, 3, scale);
+        FillPx(g, denim, 4, 11, 8, 2, scale);
         FillPx(g, button, 6, 11, 1, 1, scale);
         FillPx(g, button, 10, 11, 1, 1, scale);
 
@@ -115,21 +139,61 @@ internal sealed class SpriteAtlas : IDisposable
         {
             case 1:
                 // Run frame A.
+                FillPx(g, denim, 4, 13, 4, 1, scale);
+                FillPx(g, denim, 9, 13, 3, 1, scale);
                 FillPx(g, hair, 3, 14, 4, 2, scale);
                 FillPx(g, hair, 10, 14, 3, 2, scale);
                 break;
             case 2:
                 // Run frame B.
+                FillPx(g, denim, 5, 13, 3, 1, scale);
+                FillPx(g, denim, 8, 13, 4, 1, scale);
                 FillPx(g, hair, 5, 14, 3, 2, scale);
                 FillPx(g, hair, 8, 14, 4, 2, scale);
                 break;
             case 3:
                 // Jump frame.
+                FillPx(g, shirt, 3, 7, 2, 2, scale);
+                FillPx(g, shirt, 11, 7, 2, 2, scale);
+                FillPx(g, denim, 5, 13, 6, 1, scale);
+                FillPx(g, hair, 5, 14, 2, 2, scale);
+                FillPx(g, hair, 9, 14, 2, 2, scale);
+                break;
+            case 4:
+                // Fall frame.
+                FillPx(g, shirt, 2, 9, 2, 1, scale);
+                FillPx(g, shirt, 12, 9, 2, 1, scale);
+                FillPx(g, denim, 4, 13, 3, 1, scale);
+                FillPx(g, denim, 9, 13, 3, 1, scale);
+                FillPx(g, hair, 3, 14, 3, 2, scale);
+                FillPx(g, hair, 10, 14, 3, 2, scale);
+                break;
+            case 5:
+                // Skid frame.
+                FillPx(g, shirt, 3, 9, 2, 1, scale);
+                FillPx(g, denim, 4, 13, 3, 1, scale);
+                FillPx(g, denim, 8, 13, 4, 1, scale);
+                FillPx(g, hair, 2, 14, 5, 2, scale);
+                FillPx(g, hair, 10, 14, 4, 2, scale);
+                break;
+            case 6:
+                // Idle blink frame.
+                FillPx(g, denim, 4, 13, 8, 1, scale);
                 FillPx(g, hair, 4, 14, 3, 2, scale);
                 FillPx(g, hair, 9, 14, 3, 2, scale);
+                FillPx(g, skin, 8, 5, 1, 1, scale);
+                FillPx(g, skin, 10, 5, 1, 1, scale);
+                break;
+            case 7:
+                // Run frame C.
+                FillPx(g, denim, 4, 13, 3, 1, scale);
+                FillPx(g, denim, 9, 13, 3, 1, scale);
+                FillPx(g, hair, 4, 14, 2, 2, scale);
+                FillPx(g, hair, 10, 14, 2, 2, scale);
                 break;
             default:
                 // Idle frame.
+                FillPx(g, denim, 4, 13, 8, 1, scale);
                 FillPx(g, hair, 4, 14, 3, 2, scale);
                 FillPx(g, hair, 9, 14, 3, 2, scale);
                 break;

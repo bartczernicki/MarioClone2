@@ -113,10 +113,12 @@ internal sealed partial class GameForm
                 : _sprites.CoinB;
 
             var bob = MathF.Sin(_animTime * 8f + coin.PulseOffset) * 3f;
-            var x = (int)(coin.X - _cameraX);
-            var y = (int)(coin.Y + bob);
+            var centerX = coin.X + (GameConstants.CoinSourceSize * 0.5f);
+            var centerY = coin.Y + bob + (GameConstants.CoinSourceSize * 0.5f);
+            var x = centerX - _cameraX - (GameConstants.CoinRenderSize * 0.5f);
+            var y = centerY - (GameConstants.CoinRenderSize * 0.5f);
 
-            g.DrawImage(sprite, x, y, 16, 16);
+            g.DrawImage(sprite, x, y, GameConstants.CoinRenderSize, GameConstants.CoinRenderSize);
         }
 
         foreach (var enemy in _level.Enemies)
@@ -144,22 +146,99 @@ internal sealed partial class GameForm
             g.DrawImage(_sprites.Mushroom, x, y, 20, 20);
         }
 
-        var marioSprite = _sprites.GetPlayerFrame(_animTime, _player.Vx, _player.OnGround);
-        var playerX = (int)(_player.X - _cameraX);
-        var playerY = (int)_player.Y;
+        DrawBrickBreakEffects(g);
+        DrawCoinPopEffects(g);
+
+        var marioSprite = _sprites.GetPlayerFrame(_animTime, _player.Vx, _player.Vy, _player.OnGround, _player.Facing);
+        var playerX = _player.X - _cameraX;
+        var playerY = _player.Y;
+        var drawX = playerX;
+        var drawY = playerY;
+        var drawWidth = _player.Width;
+        var drawHeight = _player.Height;
+
+        if (_player.OnGround && MathF.Abs(_player.Vx) > 24f)
+        {
+            drawY += MathF.Sin(_animTime * 24f) * 0.65f;
+        }
+        else if (!_player.OnGround)
+        {
+            if (_player.Vy < -110f)
+            {
+                // Stretch slightly while rising fast.
+                drawX += 0.8f;
+                drawY -= 2f;
+                drawWidth -= 1.6f;
+                drawHeight += 2.4f;
+            }
+            else if (_player.Vy > 120f)
+            {
+                // Squash slightly while falling fast.
+                drawX -= 0.9f;
+                drawY += 1.8f;
+                drawWidth += 1.8f;
+                drawHeight -= 1.8f;
+            }
+        }
+
+        if (_player.DamageCooldownSeconds > 0f && ((int)(_animTime * 20f) % 2 == 0))
+        {
+            return;
+        }
 
         if (_player.Facing >= 0)
         {
-            g.DrawImage(marioSprite, playerX, playerY, (int)_player.Width, (int)_player.Height);
+            g.DrawImage(marioSprite, drawX, drawY, drawWidth, drawHeight);
         }
         else
         {
             // Mirror sprite around its local origin when facing left.
             var state = g.Save();
-            g.TranslateTransform(playerX + _player.Width, playerY);
+            g.TranslateTransform(drawX + drawWidth, drawY);
             g.ScaleTransform(-1f, 1f);
-            g.DrawImage(marioSprite, 0, 0, _player.Width, _player.Height);
+            g.DrawImage(marioSprite, 0, 0, drawWidth, drawHeight);
             g.Restore(state);
+        }
+    }
+
+    private void DrawBrickBreakEffects(Graphics g)
+    {
+        foreach (var piece in _brickDebris)
+        {
+            var progress = piece.Age / piece.Life;
+            var size = 11f - (progress * 3f);
+            var screenX = piece.X - _cameraX;
+            var screenY = piece.Y;
+
+            var state = g.Save();
+            g.TranslateTransform(screenX + (size * 0.5f), screenY + (size * 0.5f));
+            g.RotateTransform(piece.Angle);
+            g.DrawImage(
+                _sprites.BrickTile,
+                new RectangleF(-(size * 0.5f), -(size * 0.5f), size, size),
+                new RectangleF(piece.SourceX, piece.SourceY, piece.SourceSize, piece.SourceSize),
+                GraphicsUnit.Pixel);
+            g.Restore(state);
+        }
+    }
+
+    private void DrawCoinPopEffects(Graphics g)
+    {
+        foreach (var pop in _coinPops)
+        {
+            var progress = pop.Age / pop.Life;
+            var eased = 1f - ((1f - progress) * (1f - progress));
+            var rise = eased * 32f;
+            var wobble = MathF.Sin((progress * 16f) + (pop.X * 0.09f)) * 1.1f;
+            var size = GameConstants.CoinRenderSize - (progress * 3.2f);
+            var x = pop.X - _cameraX - (size * 0.5f) + wobble;
+            var y = pop.Y - rise - (size * 0.5f);
+
+            var sprite = MathF.Sin((_animTime * 14f) + pop.X) > 0f
+                ? _sprites.CoinA
+                : _sprites.CoinB;
+
+            g.DrawImage(sprite, x, y, size, size);
         }
     }
 

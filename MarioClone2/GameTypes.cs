@@ -9,6 +9,8 @@ internal static class GameConstants
     public const int ViewWidth = 960;
     public const int ViewHeight = 540;
     public const float Gravity = 1500f;
+    public const float CoinSourceSize = 16f;
+    public const float CoinRenderSize = 22f;
 }
 
 internal enum GamePhase

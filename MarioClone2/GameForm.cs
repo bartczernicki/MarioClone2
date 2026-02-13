@@ -19,6 +19,8 @@ internal sealed partial class GameForm : Form
     private readonly Bitmap _skyLayer;
     private readonly Bitmap _cloudLayer;
     private readonly Bitmap _mountainLayer;
+    private readonly List<BrickDebrisPiece> _brickDebris = [];
+    private readonly List<CoinPopEffect> _coinPops = [];
 
     private LevelRuntime _level = null!;
     private Player _player = null!;
@@ -103,6 +105,7 @@ internal sealed partial class GameForm : Form
         }
 
         _animTime += dt;
+        UpdateTransientEffects(dt);
 
         if (_phase == GamePhase.Playing)
         {
@@ -298,13 +301,20 @@ internal sealed partial class GameForm : Form
             }
 
             var bob = MathF.Sin(_animTime * 8f + coin.PulseOffset) * 3f;
-            var coinRect = new RectangleF(coin.X, coin.Y + bob, 16f, 16f);
+            var centerX = coin.X + (GameConstants.CoinSourceSize * 0.5f);
+            var centerY = coin.Y + bob + (GameConstants.CoinSourceSize * 0.5f);
+            var coinRect = new RectangleF(
+                centerX - (GameConstants.CoinRenderSize * 0.5f),
+                centerY - (GameConstants.CoinRenderSize * 0.5f),
+                GameConstants.CoinRenderSize,
+                GameConstants.CoinRenderSize);
             if (!playerRect.IntersectsWith(coinRect))
             {
                 continue;
             }
 
             coin.Collected = true;
+            SpawnCoinPopEffect(centerX, centerY);
             _coinCount += 1;
             _score += 100;
         }
@@ -335,9 +345,8 @@ internal sealed partial class GameForm : Form
             else
             {
                 _score += 150;
+                _audio.PlayPowerup();
             }
-
-            _audio.PlayPowerup();
         }
     }
 
@@ -375,6 +384,8 @@ internal sealed partial class GameForm : Form
         _player = new Player(_level.Spawn);
         _cameraX = 0f;
         _jumpWasDown = false;
+        _brickDebris.Clear();
+        _coinPops.Clear();
         _phase = GamePhase.Playing;
         _status = string.Empty;
     }
@@ -562,12 +573,10 @@ internal sealed partial class GameForm : Form
         var tile = _level.Tiles[tx, ty];
         if (tile.Type == TileType.Brick)
         {
-            if (_player.PowerState == PlayerPowerState.Big)
-            {
-                tile.Type = TileType.Empty;
-                _score += 125;
-                _audio.PlayBrickBreak();
-            }
+            tile.Type = TileType.Empty;
+            SpawnBrickBreakEffect(tx, ty);
+            _score += _player.PowerState == PlayerPowerState.Big ? 125 : 90;
+            _audio.PlayBrickBreak();
 
             return;
         }
@@ -579,8 +588,63 @@ internal sealed partial class GameForm : Form
 
         // Question blocks only award once.
         tile.Used = true;
+        var tileRect = TileRect(tx, ty);
+        SpawnCoinPopEffect(tileRect.Left + 8f, tileRect.Top - 8f);
         _coinCount += 1;
         _score += 100;
+    }
+
+    private void SpawnBrickBreakEffect(int tx, int ty)
+    {
+        var ts = GameConstants.TileSize;
+        var tileX = tx * ts;
+        var tileY = ty * ts;
+
+        _brickDebris.Add(new BrickDebrisPiece(tileX + 3f, tileY + 3f, -170f, -330f, 14f, 0f, 0f, 16f));
+        _brickDebris.Add(new BrickDebrisPiece(tileX + 17f, tileY + 3f, 170f, -330f, 14f, 16f, 0f, 16f));
+        _brickDebris.Add(new BrickDebrisPiece(tileX + 3f, tileY + 17f, -120f, -220f, -12f, 0f, 16f, 16f));
+        _brickDebris.Add(new BrickDebrisPiece(tileX + 17f, tileY + 17f, 120f, -220f, 12f, 16f, 16f, 16f));
+    }
+
+    private void SpawnCoinPopEffect(float x, float y)
+    {
+        _coinPops.Add(new CoinPopEffect(x, y));
+    }
+
+    private void UpdateTransientEffects(float dt)
+    {
+        for (var i = _brickDebris.Count - 1; i >= 0; i--)
+        {
+            var piece = _brickDebris[i];
+            piece.Vy += GameConstants.Gravity * 0.72f * dt;
+            piece.X += piece.Vx * dt;
+            piece.Y += piece.Vy * dt;
+            piece.Angle += piece.Spin * dt;
+            piece.Age += dt;
+
+            if (piece.Age >= piece.Life)
+            {
+                _brickDebris.RemoveAt(i);
+            }
+            else
+            {
+                _brickDebris[i] = piece;
+            }
+        }
+
+        for (var i = _coinPops.Count - 1; i >= 0; i--)
+        {
+            var pop = _coinPops[i];
+            pop.Age += dt;
+            if (pop.Age >= pop.Life)
+            {
+                _coinPops.RemoveAt(i);
+            }
+            else
+            {
+                _coinPops[i] = pop;
+            }
+        }
     }
 
     private bool CheckSpikeHazards()
@@ -640,12 +704,24 @@ internal sealed partial class GameForm : Form
 
     private void GrowPlayer()
     {
+        if (_player.PowerState == PlayerPowerState.Big)
+        {
+            return;
+        }
+
         ApplyPowerState(PlayerPowerState.Big);
+        _audio.PlayPowerup();
     }
 
     private void ShrinkPlayer()
     {
+        if (_player.PowerState == PlayerPowerState.Small)
+        {
+            return;
+        }
+
         ApplyPowerState(PlayerPowerState.Small);
+        _audio.PlayShrink();
     }
 
     private void ApplyPowerState(PlayerPowerState state)
@@ -750,5 +826,59 @@ internal sealed partial class GameForm : Form
     private void OnKeyUp(object? sender, KeyEventArgs e)
     {
         _keysDown.Remove(e.KeyCode);
+    }
+
+    private struct BrickDebrisPiece
+    {
+        public float X;
+        public float Y;
+        public float Vx;
+        public float Vy;
+        public float Spin;
+        public float Angle;
+        public float SourceX;
+        public float SourceY;
+        public float SourceSize;
+        public float Age;
+        public float Life;
+
+        public BrickDebrisPiece(
+            float x,
+            float y,
+            float vx,
+            float vy,
+            float spin,
+            float sourceX,
+            float sourceY,
+            float sourceSize)
+        {
+            X = x;
+            Y = y;
+            Vx = vx;
+            Vy = vy;
+            Spin = spin;
+            Angle = 0f;
+            SourceX = sourceX;
+            SourceY = sourceY;
+            SourceSize = sourceSize;
+            Age = 0f;
+            Life = 0.62f;
+        }
+    }
+
+    private struct CoinPopEffect
+    {
+        public float X;
+        public float Y;
+        public float Age;
+        public float Life;
+
+        public CoinPopEffect(float x, float y)
+        {
+            X = x;
+            Y = y;
+            Age = 0f;
+            Life = 0.58f;
+        }
     }
 }
