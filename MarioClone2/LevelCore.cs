@@ -43,7 +43,7 @@ internal sealed class LevelRuntime
         return tx >= 0 && ty >= 0 && tx < Width && ty < Height;
     }
 
-    // Determines if a tile should block movement; out-of-bounds side/bottom are solid.
+    // Determines if a tile should block movement; side bounds are solid, bottom is open void.
     public bool IsSolid(int tx, int ty)
     {
         if (tx < 0 || tx >= Width)
@@ -58,7 +58,7 @@ internal sealed class LevelRuntime
 
         if (ty >= Height)
         {
-            return true;
+            return false;
         }
 
         var type = Tiles[tx, ty].Type;

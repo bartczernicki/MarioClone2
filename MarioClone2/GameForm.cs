@@ -15,6 +15,7 @@ internal sealed partial class GameForm : Form
     private readonly HashSet<Keys> _keysDown = new();
     private readonly List<LevelDefinition> _levelDefinitions = LevelFactory.Create();
     private readonly SpriteAtlas _sprites = new();
+    private readonly GameAudio _audio;
     private readonly Bitmap _skyLayer;
     private readonly Bitmap _cloudLayer;
     private readonly Bitmap _mountainLayer;
@@ -55,6 +56,8 @@ internal sealed partial class GameForm : Form
         _skyLayer = CreateSkyLayer(1920, GameConstants.ViewHeight);
         _cloudLayer = CreateCloudLayer(1920, GameConstants.ViewHeight);
         _mountainLayer = CreateMountainLayer(1920, GameConstants.ViewHeight);
+        _audio = new GameAudio();
+        _audio.PlayMusic();
 
         ApplyLoadedSaveState(SaveStore.LoadOrDefault());
         LoadLevel(_levelIndex);
@@ -73,6 +76,7 @@ internal sealed partial class GameForm : Form
         {
             _timer.Dispose();
             _sprites.Dispose();
+            _audio.Dispose();
             _skyLayer.Dispose();
             _cloudLayer.Dispose();
             _mountainLayer.Dispose();
@@ -153,6 +157,7 @@ internal sealed partial class GameForm : Form
         {
             _player.Vy = -560f;
             _player.OnGround = false;
+            _audio.PlayJump();
         }
 
         // Jump-cut behavior: releasing jump early shortens the jump arc.
@@ -268,6 +273,7 @@ internal sealed partial class GameForm : Form
                 enemy.Alive = false;
                 _score += 200;
                 _player.Vy = -360f;
+                _audio.PlaySquish();
             }
             else
             {
@@ -330,6 +336,8 @@ internal sealed partial class GameForm : Form
             {
                 _score += 150;
             }
+
+            _audio.PlayPowerup();
         }
     }
 
@@ -558,6 +566,7 @@ internal sealed partial class GameForm : Form
             {
                 tile.Type = TileType.Empty;
                 _score += 125;
+                _audio.PlayBrickBreak();
             }
 
             return;
