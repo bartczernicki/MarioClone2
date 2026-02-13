@@ -24,6 +24,7 @@ internal static class LevelFactory
         var tiles = new TileCell[width, height];
         var enemies = new List<Enemy>();
         var coins = new List<CoinPickup>();
+        var powerups = new List<PowerupPickup>();
 
         // Fallback values used if a map omits explicit spawn/flag markers.
         var spawn = new PointF(64f, 64f);
@@ -39,7 +40,8 @@ internal static class LevelFactory
                 var tileType = TileType.Empty;
 
                 // Authoring legend:
-                // # ground, B brick, ? question, P pipe, M spawn, E enemy, C coin, F flag.
+                // # ground, B brick, ? question, P pipe, ^ spike,
+                // M spawn, E enemy, C coin, U power-up, F flag.
                 switch (c)
                 {
                     case '#':
@@ -53,6 +55,9 @@ internal static class LevelFactory
                         break;
                     case 'P':
                         tileType = TileType.Pipe;
+                        break;
+                    case '^':
+                        tileType = TileType.Spike;
                         break;
                     case 'M':
                         spawn = new PointF(x * GameConstants.TileSize + 4f, y * GameConstants.TileSize + 2f);
@@ -69,6 +74,11 @@ internal static class LevelFactory
                             y * GameConstants.TileSize + 8f,
                             (x + y) * 0.42f));
                         break;
+                    case 'U':
+                        powerups.Add(new PowerupPickup(
+                            x * GameConstants.TileSize + 6f,
+                            y * GameConstants.TileSize + 8f));
+                        break;
                     case 'F':
                         flagX = x * GameConstants.TileSize + 8f;
                         break;
@@ -78,7 +88,7 @@ internal static class LevelFactory
             }
         }
 
-        return new LevelRuntime(definition.Name, tiles, enemies, coins, spawn, flagX);
+        return new LevelRuntime(definition.Name, tiles, enemies, coins, powerups, spawn, flagX);
     }
 
     // World 1 layout with gentle platforming and enemy density.
@@ -115,6 +125,15 @@ internal static class LevelFactory
         b.FillRect(134, 11, 6, 1, 'B');
         b.Place(135, 11, '?');
         b.Place(138, 11, '?');
+
+        b.Place(12, 12, 'U');
+        b.Place(76, 11, 'U');
+        b.Place(168, 12, 'U');
+
+        b.Place(34, 14, '^');
+        b.Place(68, 14, '^');
+        b.Place(118, 14, '^');
+        b.Place(166, 14, '^');
 
         for (var step = 0; step < 6; step++)
         {
@@ -184,6 +203,16 @@ internal static class LevelFactory
         b.Place(98, 9, '?');
         b.Place(145, 10, '?');
         b.Place(188, 9, '?');
+
+        b.Place(24, 9, 'U');
+        b.Place(120, 10, 'U');
+        b.Place(196, 8, 'U');
+
+        b.Place(30, 14, '^');
+        b.Place(62, 14, '^');
+        b.Place(100, 14, '^');
+        b.Place(146, 14, '^');
+        b.Place(188, 14, '^');
 
         b.FillRect(40, 13, 2, 2, 'P');
         b.FillRect(76, 12, 2, 3, 'P');

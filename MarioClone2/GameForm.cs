@@ -22,6 +22,7 @@ internal sealed partial class GameForm : Form
     private LevelRuntime _level = null!;
     private Player _player = null!;
     private int _levelIndex;
+    private int _unlockedLevelIndex;
     private float _cameraX;
     private double _lastTickSeconds;
     private float _animTime;
@@ -55,8 +56,8 @@ internal sealed partial class GameForm : Form
         _cloudLayer = CreateCloudLayer(1920, GameConstants.ViewHeight);
         _mountainLayer = CreateMountainLayer(1920, GameConstants.ViewHeight);
 
-        // Start from the first authored level.
-        LoadLevel(0);
+        ApplyLoadedSaveState(SaveStore.LoadOrDefault());
+        LoadLevel(_levelIndex);
 
         _timer = new System.Windows.Forms.Timer { Interval = 16 };
         _timer.Tick += OnTick;
@@ -109,6 +110,11 @@ internal sealed partial class GameForm : Form
 
     private void UpdateGame(float dt)
     {
+        if (_player.DamageCooldownSeconds > 0f)
+        {
+            _player.DamageCooldownSeconds = Math.Max(0f, _player.DamageCooldownSeconds - dt);
+        }
+
         var left = IsDown(Keys.Left, Keys.A);
         var right = IsDown(Keys.Right, Keys.D);
         var jumpDown = IsDown(Keys.Space, Keys.Up, Keys.W);
@@ -165,13 +171,23 @@ internal sealed partial class GameForm : Form
         _player.Y += _player.Vy * dt;
         ResolvePlayerVertical();
 
+        if (CheckSpikeHazards())
+        {
+            return;
+        }
+
         if (_player.Y > _level.PixelHeight + 180f)
         {
             LoseLife();
             return;
         }
 
-        UpdateEnemies(dt);
+        if (UpdateEnemies(dt))
+        {
+            return;
+        }
+
+        CollectPowerups();
         CollectCoins();
 
         if (_player.X + _player.Width >= _level.FlagX)
@@ -179,12 +195,16 @@ internal sealed partial class GameForm : Form
             _score += 1000;
             if (_levelIndex + 1 < _levelDefinitions.Count)
             {
+                _unlockedLevelIndex = Math.Max(_unlockedLevelIndex, _levelIndex + 1);
                 LoadLevel(_levelIndex + 1);
+                SaveProgress();
             }
             else
             {
+                _unlockedLevelIndex = Math.Max(_unlockedLevelIndex, _levelDefinitions.Count - 1);
                 _phase = GamePhase.Won;
                 _status = "You Win! Press Enter to play again.";
+                SaveProgress();
             }
 
             return;
@@ -198,7 +218,7 @@ internal sealed partial class GameForm : Form
             maxCamera);
     }
 
-    private void UpdateEnemies(float dt)
+    private bool UpdateEnemies(float dt)
     {
         foreach (var enemy in _level.Enemies)
         {
@@ -251,10 +271,14 @@ internal sealed partial class GameForm : Form
             }
             else
             {
-                LoseLife();
-                return;
+                if (TryHandlePlayerDamage())
+                {
+                    return true;
+                }
             }
         }
+
+        return false;
     }
 
     private void CollectCoins()
@@ -280,13 +304,44 @@ internal sealed partial class GameForm : Form
         }
     }
 
+    private void CollectPowerups()
+    {
+        var playerRect = PlayerRect();
+        foreach (var powerup in _level.Powerups)
+        {
+            if (powerup.Collected)
+            {
+                continue;
+            }
+
+            var pickupRect = new RectangleF(powerup.X, powerup.Y, 20f, 20f);
+            if (!playerRect.IntersectsWith(pickupRect))
+            {
+                continue;
+            }
+
+            powerup.Collected = true;
+            if (_player.PowerState == PlayerPowerState.Small)
+            {
+                GrowPlayer();
+                _score += 250;
+            }
+            else
+            {
+                _score += 150;
+            }
+        }
+    }
+
     private void LoseLife()
     {
         _lives -= 1;
         if (_lives <= 0)
         {
+            _lives = 0;
             _phase = GamePhase.GameOver;
             _status = "Game Over. Press Enter to restart.";
+            SaveProgress();
             return;
         }
 
@@ -298,15 +353,17 @@ internal sealed partial class GameForm : Form
         _score = 0;
         _coinCount = 0;
         _lives = 3;
+        _levelIndex = 0;
         _phase = GamePhase.Playing;
         _status = string.Empty;
         LoadLevel(0);
+        SaveProgress();
     }
 
     private void LoadLevel(int index)
     {
-        _levelIndex = index;
-        _level = LevelFactory.CreateRuntime(_levelDefinitions[index]);
+        _levelIndex = Math.Clamp(index, 0, _levelDefinitions.Count - 1);
+        _level = LevelFactory.CreateRuntime(_levelDefinitions[_levelIndex]);
         _player = new Player(_level.Spawn);
         _cameraX = 0f;
         _jumpWasDown = false;
@@ -495,6 +552,17 @@ internal sealed partial class GameForm : Form
         }
 
         var tile = _level.Tiles[tx, ty];
+        if (tile.Type == TileType.Brick)
+        {
+            if (_player.PowerState == PlayerPowerState.Big)
+            {
+                tile.Type = TileType.Empty;
+                _score += 125;
+            }
+
+            return;
+        }
+
         if (tile.Type != TileType.Question || tile.Used)
         {
             return;
@@ -504,6 +572,108 @@ internal sealed partial class GameForm : Form
         tile.Used = true;
         _coinCount += 1;
         _score += 100;
+    }
+
+    private bool CheckSpikeHazards()
+    {
+        var bounds = PlayerRect();
+        var minX = ToTile(bounds.Left + 1f);
+        var maxX = ToTile(bounds.Right - 1f);
+        var minY = ToTile(bounds.Top);
+        var maxY = ToTile(bounds.Bottom - 0.001f);
+
+        for (var ty = minY; ty <= maxY; ty++)
+        {
+            for (var tx = minX; tx <= maxX; tx++)
+            {
+                if (!_level.InBounds(tx, ty))
+                {
+                    continue;
+                }
+
+                var tile = _level.Tiles[tx, ty];
+                if (tile.Type != TileType.Spike)
+                {
+                    continue;
+                }
+
+                var tileRect = TileRect(tx, ty);
+                if (!bounds.IntersectsWith(tileRect))
+                {
+                    continue;
+                }
+
+                return TryHandlePlayerDamage();
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryHandlePlayerDamage()
+    {
+        if (_player.DamageCooldownSeconds > 0f)
+        {
+            return false;
+        }
+
+        if (_player.PowerState == PlayerPowerState.Big)
+        {
+            ShrinkPlayer();
+            _player.DamageCooldownSeconds = 1.1f;
+            _player.Vy = -180f;
+            return false;
+        }
+
+        LoseLife();
+        return true;
+    }
+
+    private void GrowPlayer()
+    {
+        ApplyPowerState(PlayerPowerState.Big);
+    }
+
+    private void ShrinkPlayer()
+    {
+        ApplyPowerState(PlayerPowerState.Small);
+    }
+
+    private void ApplyPowerState(PlayerPowerState state)
+    {
+        if (_player.PowerState == state)
+        {
+            return;
+        }
+
+        var feet = _player.Y + _player.Height;
+        _player.PowerState = state;
+        _player.Y = feet - _player.Height;
+    }
+
+    private void ApplyLoadedSaveState(SaveData save)
+    {
+        var maxLevel = Math.Max(0, _levelDefinitions.Count - 1);
+        _unlockedLevelIndex = Math.Clamp(save.UnlockedLevelIndex, 0, maxLevel);
+
+        var requestedLevel = Math.Clamp(save.CurrentLevelIndex, 0, maxLevel);
+        _levelIndex = Math.Min(requestedLevel, _unlockedLevelIndex);
+
+        _score = Math.Max(0, save.Score);
+        _coinCount = Math.Max(0, save.CoinCount);
+        _lives = Math.Clamp(save.Lives, 1, 99);
+    }
+
+    private void SaveProgress()
+    {
+        SaveStore.Save(new SaveData
+        {
+            UnlockedLevelIndex = _unlockedLevelIndex,
+            CurrentLevelIndex = _levelIndex,
+            Score = Math.Max(0, _score),
+            CoinCount = Math.Max(0, _coinCount),
+            Lives = Math.Max(0, _lives)
+        });
     }
 
     private RectangleF PlayerRect()

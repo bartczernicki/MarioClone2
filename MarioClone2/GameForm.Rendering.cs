@@ -84,6 +84,9 @@ internal sealed partial class GameForm
                     case TileType.Pipe:
                         g.DrawImage(_sprites.PipeTile, screenX, screenY, tileSize, tileSize);
                         break;
+                    case TileType.Spike:
+                        g.DrawImage(_sprites.SpikeTile, screenX, screenY, tileSize, tileSize);
+                        break;
                 }
             }
         }
@@ -129,6 +132,18 @@ internal sealed partial class GameForm
             g.DrawImage(sprite, x, y, (int)enemy.Width, (int)enemy.Height);
         }
 
+        foreach (var powerup in _level.Powerups)
+        {
+            if (powerup.Collected)
+            {
+                continue;
+            }
+
+            var x = (int)(powerup.X - _cameraX);
+            var y = (int)powerup.Y;
+            g.DrawImage(_sprites.Mushroom, x, y, 20, 20);
+        }
+
         var marioSprite = _sprites.GetPlayerFrame(_animTime, _player.Vx, _player.OnGround);
         var playerX = (int)(_player.X - _cameraX);
         var playerY = (int)_player.Y;
@@ -154,7 +169,8 @@ internal sealed partial class GameForm
         using var textBrush = new SolidBrush(Color.WhiteSmoke);
         using var font = new Font("Consolas", 15f, FontStyle.Bold, GraphicsUnit.Pixel);
 
-        var hud = $"WORLD {_levelIndex + 1}/{_levelDefinitions.Count}    LIVES {_lives}    COINS {_coinCount}    SCORE {_score}";
+        var powerText = _player.PowerState == PlayerPowerState.Big ? "BIG" : "SMALL";
+        var hud = $"WORLD {_levelIndex + 1}/{_levelDefinitions.Count}    LIVES {_lives}    COINS {_coinCount}    SCORE {_score}    FORM {powerText}";
         g.DrawString(hud, font, shadowBrush, 13, 13);
         g.DrawString(hud, font, textBrush, 12, 12);
     }

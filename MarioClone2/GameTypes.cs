@@ -28,7 +28,14 @@ internal enum TileType
     Ground,
     Brick,
     Question,
-    Pipe
+    Pipe,
+    Spike
+}
+
+internal enum PlayerPowerState
+{
+    Small,
+    Big
 }
 
 // Mutable player state used by simulation and rendering.
@@ -39,11 +46,16 @@ internal sealed class Player
     public float Vx;
     public float Vy;
 
+    public const float SmallHeight = 30f;
+    public const float BigHeight = 42f;
+
     public float Width { get; } = 24f;
-    public float Height { get; } = 30f;
+    public float Height => PowerState == PlayerPowerState.Big ? BigHeight : SmallHeight;
     public bool OnGround;
     // Horizontal facing direction: -1 left, +1 right.
     public int Facing = 1;
+    public PlayerPowerState PowerState = PlayerPowerState.Small;
+    public float DamageCooldownSeconds;
 
     // Initializes the player at the current level spawn point.
     public Player(PointF spawn)
@@ -89,6 +101,19 @@ internal sealed class CoinPickup
         X = x;
         Y = y;
         PulseOffset = pulseOffset;
+    }
+}
+
+internal sealed class PowerupPickup
+{
+    public float X;
+    public float Y;
+    public bool Collected;
+
+    public PowerupPickup(float x, float y)
+    {
+        X = x;
+        Y = y;
     }
 }
 

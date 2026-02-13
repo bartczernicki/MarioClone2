@@ -19,7 +19,9 @@ internal sealed class SpriteAtlas : IDisposable
     public Bitmap QuestionTile { get; }
     public Bitmap QuestionUsedTile { get; }
     public Bitmap PipeTile { get; }
+    public Bitmap SpikeTile { get; }
     public Bitmap Flag { get; }
+    public Bitmap Mushroom { get; }
 
     // Tracks every allocated bitmap so disposal is guaranteed in one place.
     private readonly List<Bitmap> _all = new();
@@ -46,7 +48,9 @@ internal sealed class SpriteAtlas : IDisposable
         QuestionTile = Add(CreateQuestionTile(false));
         QuestionUsedTile = Add(CreateQuestionTile(true));
         PipeTile = Add(CreatePipeTile());
+        SpikeTile = Add(CreateSpikeTile());
         Flag = Add(CreateFlagTile());
+        Mushroom = Add(CreateMushroomSprite());
     }
 
     // Chooses player sprite by movement state:
@@ -295,6 +299,35 @@ internal sealed class SpriteAtlas : IDisposable
         return bmp;
     }
 
+    private static Bitmap CreateSpikeTile()
+    {
+        var s = GameConstants.TileSize;
+        var bmp = new Bitmap(s, s);
+        using var g = Graphics.FromImage(bmp);
+        g.Clear(Color.Transparent);
+
+        using var metal = new SolidBrush(Color.FromArgb(205, 215, 230));
+        using var outline = new Pen(Color.FromArgb(118, 126, 140), 2f);
+        using var baseBrush = new SolidBrush(Color.FromArgb(95, 103, 116));
+
+        g.FillRectangle(baseBrush, 0, s - 6, s, 6);
+        for (var i = 0; i < 4; i++)
+        {
+            var x = i * (s / 4);
+            Point[] spike =
+            [
+                new Point(x + 2, s - 6),
+                new Point(x + (s / 8), 5),
+                new Point(x + (s / 4) - 2, s - 6)
+            ];
+
+            g.FillPolygon(metal, spike);
+            g.DrawPolygon(outline, spike);
+        }
+
+        return bmp;
+    }
+
     private static Bitmap CreateFlagTile()
     {
         var bmp = new Bitmap(32, 24);
@@ -313,6 +346,33 @@ internal sealed class SpriteAtlas : IDisposable
 
         g.FillPolygon(redBrush, flagPoints);
         g.FillEllipse(whiteBrush, 10, 4, 7, 7);
+
+        return bmp;
+    }
+
+    private static Bitmap CreateMushroomSprite()
+    {
+        const int size = 20;
+        var bmp = new Bitmap(size, size);
+        using var g = Graphics.FromImage(bmp);
+        g.Clear(Color.Transparent);
+
+        using var cap = new SolidBrush(Color.FromArgb(210, 60, 60));
+        using var capSpot = new SolidBrush(Color.FromArgb(245, 245, 245));
+        using var stem = new SolidBrush(Color.FromArgb(244, 224, 179));
+        using var eye = new SolidBrush(Color.FromArgb(44, 44, 44));
+        using var outline = new Pen(Color.FromArgb(102, 60, 48), 1f);
+
+        g.FillEllipse(cap, 1, 0, 18, 11);
+        g.FillEllipse(capSpot, 4, 2, 4, 3);
+        g.FillEllipse(capSpot, 11, 3, 4, 3);
+
+        g.FillRectangle(stem, 4, 8, 12, 10);
+        g.FillEllipse(eye, 7, 11, 2, 3);
+        g.FillEllipse(eye, 11, 11, 2, 3);
+
+        g.DrawArc(outline, 1, 0, 18, 11, 0, 180);
+        g.DrawRectangle(outline, 4, 8, 12, 10);
 
         return bmp;
     }

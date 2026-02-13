@@ -9,6 +9,7 @@ internal sealed class LevelRuntime
     public TileCell[,] Tiles { get; }
     public List<Enemy> Enemies { get; }
     public List<CoinPickup> Coins { get; }
+    public List<PowerupPickup> Powerups { get; }
     public PointF Spawn { get; }
     public float FlagX { get; }
 
@@ -23,6 +24,7 @@ internal sealed class LevelRuntime
         TileCell[,] tiles,
         List<Enemy> enemies,
         List<CoinPickup> coins,
+        List<PowerupPickup> powerups,
         PointF spawn,
         float flagX)
     {
@@ -30,6 +32,7 @@ internal sealed class LevelRuntime
         Tiles = tiles;
         Enemies = enemies;
         Coins = coins;
+        Powerups = powerups;
         Spawn = spawn;
         FlagX = flagX;
     }
@@ -59,7 +62,7 @@ internal sealed class LevelRuntime
         }
 
         var type = Tiles[tx, ty].Type;
-        return type is TileType.Ground or TileType.Brick or TileType.Question or TileType.Pipe;
+        return type is TileType.Ground or TileType.Brick or TileType.Question or TileType.Pipe or TileType.Spike;
     }
 
     // Finds the first solid tile under the flagpole for pole rendering.
