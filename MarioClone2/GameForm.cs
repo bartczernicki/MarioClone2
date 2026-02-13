@@ -19,6 +19,7 @@ internal sealed partial class GameForm : Form
     private readonly Bitmap _skyLayer;
     private readonly Bitmap _cloudLayer;
     private readonly Bitmap _mountainLayer;
+    // Short-lived visual FX containers updated every frame.
     private readonly List<BrickDebrisPiece> _brickDebris = [];
     private readonly List<CoinPopEffect> _coinPops = [];
 
@@ -600,6 +601,7 @@ internal sealed partial class GameForm : Form
         var tileX = tx * ts;
         var tileY = ty * ts;
 
+        // Four chunk burst: upper shards launch faster than lower shards.
         _brickDebris.Add(new BrickDebrisPiece(tileX + 3f, tileY + 3f, -170f, -330f, 14f, 0f, 0f, 16f));
         _brickDebris.Add(new BrickDebrisPiece(tileX + 17f, tileY + 3f, 170f, -330f, 14f, 16f, 0f, 16f));
         _brickDebris.Add(new BrickDebrisPiece(tileX + 3f, tileY + 17f, -120f, -220f, -12f, 0f, 16f, 16f));
@@ -608,11 +610,13 @@ internal sealed partial class GameForm : Form
 
     private void SpawnCoinPopEffect(float x, float y)
     {
+        // Effects are spawned using center coordinates for easier scaling.
         _coinPops.Add(new CoinPopEffect(x, y));
     }
 
     private void UpdateTransientEffects(float dt)
     {
+        // Integrate and cull brick fragments.
         for (var i = _brickDebris.Count - 1; i >= 0; i--)
         {
             var piece = _brickDebris[i];
@@ -632,6 +636,7 @@ internal sealed partial class GameForm : Form
             }
         }
 
+        // Age out floating coin pop effects.
         for (var i = _coinPops.Count - 1; i >= 0; i--)
         {
             var pop = _coinPops[i];
@@ -862,10 +867,12 @@ internal sealed partial class GameForm : Form
             SourceY = sourceY;
             SourceSize = sourceSize;
             Age = 0f;
+            // Slightly over half a second keeps feedback snappy.
             Life = 0.62f;
         }
     }
 
+    // Temporary rising coin used for pickup/question-block feedback.
     private struct CoinPopEffect
     {
         public float X;

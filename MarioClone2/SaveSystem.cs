@@ -2,8 +2,10 @@ using System.Text.Json;
 
 namespace MarioClone2;
 
+// Persisted run-state snapshot used for lightweight milestone saves.
 internal sealed class SaveData
 {
+    // Increment when save shape/semantics change in a non-backward-compatible way.
     public const int CurrentVersion = 1;
 
     public int Version { get; set; } = CurrentVersion;
@@ -14,6 +16,7 @@ internal sealed class SaveData
     public int Lives { get; set; } = 3;
     public DateTime LastUpdatedUtc { get; set; } = DateTime.UtcNow;
 
+    // Produces a known-safe baseline so load failures never block startup.
     public static SaveData CreateDefault()
     {
         return new SaveData
@@ -29,8 +32,10 @@ internal sealed class SaveData
     }
 }
 
+// File-backed save helper with defensive load/save behavior.
 internal static class SaveStore
 {
+    // Human-readable JSON is acceptable here because writes are infrequent milestones.
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true
@@ -52,6 +57,7 @@ internal static class SaveStore
         }
         catch
         {
+            // Corrupt/partial files are ignored so the game can still boot.
             return SaveData.CreateDefault();
         }
     }
@@ -81,6 +87,7 @@ internal static class SaveStore
 
     public static string GetSavePath()
     {
+        // Store under LocalAppData so saves are user-scoped and writable without admin rights.
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         return Path.Combine(localAppData, "MarioClone2", "save.json");
     }

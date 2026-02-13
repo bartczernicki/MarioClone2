@@ -4,8 +4,11 @@ using NAudio.Wave.SampleProviders;
 
 namespace MarioClone2;
 
+// Lightweight procedural audio system built on a single software mixer.
+// Music is looped continuously while SFX are mixed in as one-shot layers.
 internal sealed class GameAudio : IDisposable
 {
+    // MixingSampleProvider is not thread-safe for concurrent AddMixerInput calls.
     private readonly object _mixerLock = new();
     private WaveOutEvent? _outputDevice;
     private MixingSampleProvider? _mixer;
@@ -175,6 +178,7 @@ internal static class WaveFactory
     public static byte[] CreateShrinkWave()
     {
         var b = new WaveBuilder(SampleRate);
+        // Descending chirp implies the player shrinking.
         b.AddSquare(780f, 0.03f, 0.18f);
         b.AddSquare(520f, 0.035f, 0.17f);
         b.AddSquare(340f, 0.05f, 0.16f);

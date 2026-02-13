@@ -9,7 +9,9 @@ internal static class GameConstants
     public const int ViewWidth = 960;
     public const int ViewHeight = 540;
     public const float Gravity = 1500f;
+    // Native pixel dimensions of generated coin sprites in the atlas.
     public const float CoinSourceSize = 16f;
+    // On-screen coin size after upscale for better readability.
     public const float CoinRenderSize = 22f;
 }
 
@@ -36,7 +38,9 @@ internal enum TileType
 
 internal enum PlayerPowerState
 {
+    // Default one-hit state.
     Small,
+    // Expanded state; first non-stomp hit shrinks instead of consuming a life.
     Big
 }
 
@@ -57,6 +61,7 @@ internal sealed class Player
     // Horizontal facing direction: -1 left, +1 right.
     public int Facing = 1;
     public PlayerPowerState PowerState = PlayerPowerState.Small;
+    // Brief invulnerability window after shrink/hit to prevent rapid chained damage.
     public float DamageCooldownSeconds;
 
     // Initializes the player at the current level spawn point.
@@ -110,8 +115,10 @@ internal sealed class PowerupPickup
 {
     public float X;
     public float Y;
+    // Set once collected so the pickup is no longer rendered/collidable.
     public bool Collected;
 
+    // Creates a mushroom pickup in world space.
     public PowerupPickup(float x, float y)
     {
         X = x;

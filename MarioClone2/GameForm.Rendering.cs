@@ -206,6 +206,7 @@ internal sealed partial class GameForm
         foreach (var piece in _brickDebris)
         {
             var progress = piece.Age / piece.Life;
+            // Shrink fragments as they expire to soften disappearance.
             var size = 11f - (progress * 3f);
             var screenX = piece.X - _cameraX;
             var screenY = piece.Y;
@@ -227,6 +228,7 @@ internal sealed partial class GameForm
         foreach (var pop in _coinPops)
         {
             var progress = pop.Age / pop.Life;
+            // Ease-out rise gives a quick launch then slow settle/fade.
             var eased = 1f - ((1f - progress) * (1f - progress));
             var rise = eased * 32f;
             var wobble = MathF.Sin((progress * 16f) + (pop.X * 0.09f)) * 1.1f;
